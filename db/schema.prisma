@@ -1,8 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// This is your Prisma schema file for the UNO game
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -10,56 +9,81 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// --------------------------------------
-
 model User {
-  id             Int      @id @default(autoincrement())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  name           String?
-  email          String   @unique
-  hashedPassword String?
-  role           String   @default("USER")
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
 
-  tokens   Token[]
-  sessions Session[]
+  // Relations
+  gameSessions GamePlayer[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
-model Session {
-  id                 Int       @id @default(autoincrement())
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  expiresAt          DateTime?
-  handle             String    @unique
-  hashedSessionToken String?
-  antiCSRFToken      String?
-  publicData         String?
-  privateData        String?
+model GameSession {
+  id       Int    @id @default(autoincrement())
+  passcode String @unique // Random 6-character passcode for joining
+  status   String @default("waiting") // waiting, active, finished
+  gameType String // "ai" or "online"
+  winner   Int? // User ID of winner (null if ongoing)
 
-  user   User? @relation(fields: [userId], references: [id])
-  userId Int?
+  // Game state
+  currentPlayerIndex Int     @default(0) // 0 or 1 (which player's turn)
+  direction          Int     @default(1) // 1 for clockwise, -1 for counter-clockwise
+  currentColor       String? // Current color in play
+  currentNumber      Int? // Current number in play
+
+  // Deck and discard pile (stored as JSON)
+  deck        String @default("[]") // JSON array of remaining cards
+  discardPile String @default("[]") // JSON array of played cards
+  drawCount   Int    @default(0) // For Draw 2/Draw 4 stacking
+
+  // Players in this game
+  players GamePlayer[]
+  moves   Move[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Token {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  hashedToken String
-  type        String
-  // See note below about TokenType enum
-  // type        TokenType
-  expiresAt   DateTime
-  sentTo      String
+model GamePlayer {
+  id          Int    @id @default(autoincrement())
+  gameId      Int
+  userId      Int
+  playerIndex Int // 0 or 1 (first or second player)
+  hand        String @default("[]") // JSON array of cards in player's hand
+  score       Int    @default(0) // For multiple rounds
 
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
+  // Relations
+  game GameSession @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([hashedToken, type])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([gameId, userId]) // One user can't be in same game twice
 }
 
-// NOTE: It's highly recommended to use an enum for the token type
-//       but enums only work in Postgres.
-//       See: https://blitzjs.com/docs/database-overview#switch-to-postgre-sql
-// enum TokenType {
-//   RESET_PASSWORD
-// }
+model Card {
+  id       Int     @id @default(autoincrement())
+  color    String // "red", "yellow", "green", "blue", "wild"
+  type     String // "0"-"9", "skip", "reverse", "draw2", "wild", "wilddraw4"
+  value    Int? // For number cards
+  imageUrl String?
+
+  createdAt DateTime @default(now())
+}
+
+model Move {
+  id         Int      @id @default(autoincrement())
+  gameId     Int
+  playerId   Int
+  cardPlayed String // JSON: { color, type, value }
+  action     String // "play", "draw", "challenge", "calluno"
+  timestamp  DateTime @default(now())
+
+  // Relations
+  game GameSession @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
