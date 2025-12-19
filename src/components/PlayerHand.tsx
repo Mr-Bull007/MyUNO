@@ -10,6 +10,7 @@ interface PlayerHandProps {
   isCurrentPlayer: boolean
   currentColor?: string
   currentNumber?: number
+  userId?: number
 }
 
 export function PlayerHand({
@@ -18,14 +19,18 @@ export function PlayerHand({
   isCurrentPlayer,
   currentColor,
   currentNumber,
+  userId,
 }: PlayerHandProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [choosingColor, setChoosingColor] = useState(false)
   const [chosenColor, setChosenColor] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const validCards = getValidCards(hand, currentColor as any, currentNumber)
-  const selectedCard = hand.find((c) => c.id === selectedCardId)
+  // Ensure hand is always an array (parse if it's a string)
+  const handArray = Array.isArray(hand) ? hand : typeof hand === "string" ? JSON.parse(hand) : []
+
+  const validCards = getValidCards(handArray, currentColor as any, currentNumber)
+  const selectedCard = handArray.find((c) => c.id === selectedCardId)
   const isWildCard = selectedCard?.type === "wild" || selectedCard?.type === "wilddraw4"
 
   const handlePlayCard = async () => {
@@ -45,6 +50,7 @@ export function PlayerHand({
           gameId,
           cardId: selectedCardId,
           chosenColor: chosenColor || selectedCard.color,
+          userId,
         }),
       })
 
@@ -67,11 +73,11 @@ export function PlayerHand({
   return (
     <Stack gap="md">
       <Text size="sm" weight={500} color={isCurrentPlayer ? "green" : "dimmed"}>
-        {isCurrentPlayer ? "👉 Your Hand" : "Your Cards"} ({hand.length})
+        {isCurrentPlayer ? "👉 Your Hand" : "Your Cards"} ({handArray.length})
       </Text>
 
       <Group gap="xs" style={{ overflowX: "auto", paddingBottom: 8 }}>
-        {hand.map((card) => {
+        {handArray.map((card) => {
           const isValid = validCards.some((v) => v.id === card.id)
           const isSelected = card.id === selectedCardId
 

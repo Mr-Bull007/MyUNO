@@ -43,6 +43,23 @@ export default function GamePage() {
         // Check if it's current player's turn
         const currentPlayer = data.players[data.currentPlayerIndex]
         setIsCurrentPlayer(currentPlayer?.userId === user?.id)
+
+        // If it's AI's turn and game is active, trigger AI move
+        if (
+          data.status === "active" &&
+          currentPlayer &&
+          currentPlayer.userId === null &&
+          data.gameType === "ai"
+        ) {
+          // Trigger AI move after a short delay (for better UX)
+          setTimeout(() => {
+            fetch("/api/games/aiMove", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ gameId: id }),
+            }).catch((err) => console.error("Error triggering AI move:", err))
+          }, 1000)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load game")
       } finally {
@@ -148,6 +165,7 @@ export default function GamePage() {
             isCurrentPlayer={isCurrentPlayer}
             currentColor={gameState.currentColor}
             currentNumber={gameState.currentNumber}
+            userId={user?.id}
           />
         )}
 

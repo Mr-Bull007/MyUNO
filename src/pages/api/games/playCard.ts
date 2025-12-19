@@ -2,7 +2,7 @@ import db from "db"
 import { playCard } from "../../../game-engine/uno-logic"
 import type { GameState, Card, CardColor } from "../../../game-engine/utils"
 
-export default async function playingCard(req, res) {
+export default async function playCardHandler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
   }

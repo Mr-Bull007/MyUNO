@@ -10,12 +10,16 @@ generator client {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id             Int     @id @default(autoincrement())
+  email          String  @unique
+  name           String?
+  hashedPassword String
+  role           String  @default("USER")
 
   // Relations
   gameSessions GamePlayer[]
+  sessions     Session[]
+  tokens       Token[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
@@ -49,14 +53,14 @@ model GameSession {
 model GamePlayer {
   id          Int    @id @default(autoincrement())
   gameId      Int
-  userId      Int
+  userId      Int? // Nullable for AI bots
   playerIndex Int // 0 or 1 (first or second player)
   hand        String @default("[]") // JSON array of cards in player's hand
   score       Int    @default(0) // For multiple rounds
 
   // Relations
   game GameSession @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -86,4 +90,38 @@ model Move {
   game GameSession @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+model Session {
+  id                 String    @id @default(cuid())
+  userId             Int?
+  expiresAt          DateTime?
+  handle             String    @unique
+  hashedSessionToken String?
+  antiCSRFToken      String?
+  publicData         String?
+  privateData        String?
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Token {
+  id          String   @id @default(cuid())
+  hashedToken String   @unique
+  type        String
+  expiresAt   DateTime
+  sentTo      String
+  userId      Int
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hashedToken, type])
 }

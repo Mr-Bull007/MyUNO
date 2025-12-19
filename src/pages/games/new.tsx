@@ -39,6 +39,11 @@ export default function NewGame() {
 
       setGameId(data.gameId)
       setPasscode(data.passcode)
+
+      // For AI games, automatically redirect to the game (no passcode needed)
+      if (gameType === "ai") {
+        void router.push(`/games/${data.gameId}`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -86,7 +91,8 @@ export default function NewGame() {
     )
   }
 
-  if (gameId && passcode) {
+  // Only show passcode screen for online games (not AI)
+  if (gameId && passcode && gameType === "online") {
     return (
       <Container size="sm" py="xl">
         <Stack gap="xl" align="center">
@@ -115,7 +121,7 @@ export default function NewGame() {
           </Text>
 
           <Button
-            onClick={() => router.push(`/games/${gameId}`)}
+            onClick={() => void router.push(`/games/${gameId}`)}
             loading={loading}
             style={{ marginTop: 20 }}
           >
